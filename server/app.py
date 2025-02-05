@@ -24,6 +24,45 @@ api = Api(app)
 def index():
     return "<h1>Code challenge</h1>"
 
+@app.route("/restaurants", methods=["GET"])
+def get_restaurants():
+    restaurants = Restaurant.query.all()
+    body = [restaurant.to_dict(rules=("-restaurant_pizzas",)) for restaurant in restaurants]
+    return make_response(body, 200)
+@app.route("/restaurants/<int:id>", methods=["GET", "DELETE"])
+def get_restaurant(id):
+    restaurant = Restaurant.query.filter_by(id=id).first()
+    if request.method == "DELETE":
+        if not restaurant:
+            return make_response({"error": "Restaurant not found"}, 404)
+        db.session.delete(restaurant)
+        db.session.commit()
+        return make_response({}, 200)
+    
+    if not restaurant:
+        return make_response({"error": "Restaurant not found"}, 404)
+    body = restaurant.to_dict()
+    return make_response(body, 200)
+
+@app.route("/pizzas" , methods=["GET"])
+def get_pizzas():
+    pizzas = Pizza.query.all()
+    body = [pizza.to_dict(rules=("-restaurant_pizzas",)) for pizza in pizzas]
+    return make_response(body, 200)
+
+@app.route("/restaurant_pizzas", methods=["POST"])
+def create_restaurant_pizzas():
+    data = request.get_json()
+    price = data.get("price")
+    pizza_id = data.get("pizza_id")
+    restaurant_id = data.get("restaurant_id")
+    if not all([price, pizza_id, restaurant_id]):
+        return make_response({"error": "Missing required fields"}, 400)
+    new_restaurant_pizza = RestaurantPizza(price=price, pizza_id=pizza_id, restaurant_id=restaurant_id)
+    db.session.add(new_restaurant_pizza)
+    db.session.commit()
+    return make_response(new_restaurant_pizza.to_dict(), 201)
+
 
 if __name__ == "__main__":
     app.run(port=5555, debug=True)
